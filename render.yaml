@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: banju
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        sync: false # 在部署面板粘贴你的 Postgres 连接串（Neon 免费档或 Render Postgres 均可）
+      - key: ADMIN_USERNAMES
+        sync: false # 填你自己想用的管理员用户名
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: SEED_PASSWORD
+        generateValue: true # 随机生成，之后可在环境变量里改成自己记得住的
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false # 填 https://你的服务.onrender.com（分享卡片里的链接用）

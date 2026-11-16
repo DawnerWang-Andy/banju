@@ -1,0 +1,207 @@
+// 半句 · 数据模型
+// SQLite(开发) 与 Postgres(生产) 双兼容：不用 enum、不用数组字段、不用各库特有语法。
+// 枚举一律用 String + 应用层校验（值域见注释）。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique // 3-20位字母数字下划线，唯一身份
+  penName      String   // 笔名，可重复可改，≤20字
+  passwordHash String
+  role         String   @default("USER") // USER | ADMIN
+  banned       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  sessions   Session[]
+  posts      Post[]
+  points     DebatePoint[]
+  likes      Like[]
+  reviews    Review[]
+  reports    Report[]
+  convosA    Conversation[] @relation("convoA")
+  convosB    Conversation[] @relation("convoB")
+  messages   Message[]
+  blocksMade Block[]        @relation("blocker")
+  blocksGot  Block[]        @relation("blocked")
+  stances    UserStance[]
+  topics     Topic[]
+  words      SensitiveWord[] @relation("wordAdder")
+}
+
+model Session {
+  id        String   @id // 随机 token
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// status: PUBLISHED | PENDING | REMOVED
+// type:   PHILOSOPHY | JOKE | MEME | ESSAY
+model Post {
+  id          String   @id @default(cuid())
+  authorId    String
+  content     String
+  type        String
+  status      String   @default("PUBLISHED")
+  likeCount   Int      @default(0)
+  reviewCount Int      @default(0)
+  reportCount Int      @default(0)
+  createdAt   DateTime @default(now())
+  author      User     @relation(fields: [authorId], references: [id])
+
+  @@index([status, likeCount])
+  @@index([status, createdAt])
+  @@index([authorId])
+}
+
+// targetType: POST | POINT
+model Like {
+  id         String   @id @default(cuid())
+  userId     String
+  targetType String
+  targetId   String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId])
+  @@index([targetType, targetId])
+}
+
+// stance: RESONATE(共鸣) | ADMIRE(拍案) | DOUBT(存疑) | PUNCH(补刀) | EXTEND(续写)
+// targetType: POST | POINT
+model Review {
+  id         String   @id @default(cuid())
+  userId     String
+  targetType String
+  targetId   String
+  stance     String
+  content    String
+  status     String   @default("PUBLISHED") // PUBLISHED | REMOVED
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId])
+  @@index([userId])
+}
+
+// targetType: POST | REVIEW | POINT | DM
+// reason:     obscene | violent | political | spam | other
+model Report {
+  id         String   @id @default(cuid())
+  targetType String
+  targetId   String
+  reporterId String
+  reason     String
+  detail     String?
+  handled    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  reporter   User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([handled, createdAt])
+}
+
+// status(辩题态): OPEN | CLOSED；审核态独立：
+// modStatus: PUBLISHED | PENDING | REMOVED
+// keywords: JSON 字符串，创建时算好的 top20 关键词 bigram，同类匹配用
+model Topic {
+  id        String   @id @default(cuid())
+  creatorId String
+  title     String
+  intro     String   @default("")
+  proLabel  String
+  conLabel  String
+  status    String   @default("OPEN")
+  modStatus String   @default("PUBLISHED")
+  keywords  String   @default("[]")
+  createdAt DateTime @default(now())
+  creator   User     @relation(fields: [creatorId], references: [id])
+
+  points DebatePoint[]
+  stances UserStance[]
+
+  @@index([status, createdAt])
+}
+
+// side: PRO | CON；status: PUBLISHED | PENDING | REMOVED
+model DebatePoint {
+  id        String   @id @default(cuid())
+  topicId   String
+  authorId  String
+  side      String
+  content   String
+  likeCount Int      @default(0)
+  status    String   @default("PUBLISHED")
+  createdAt DateTime @default(now())
+  topic     Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+
+  @@index([topicId, likeCount])
+  @@index([authorId])
+}
+
+model UserStance {
+  id       String   @id @default(cuid())
+  userId   String
+  topicId  String
+  side     String // PRO | CON
+  topic    Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, topicId])
+}
+
+// level: BLOCK(公开内容进待审/私信直接拦截) | FILTER(替换为*)
+model SensitiveWord {
+  id          String  @id @default(cuid())
+  word        String  @unique
+  level       String
+  createdAt   DateTime @default(now())
+  addedBy     String?
+  addedByUser User?   @relation("wordAdder", fields: [addedBy], references: [id])
+}
+
+// userA/userB 存储时按 userId 字典序排序，保证两人只有一条会话
+model Conversation {
+  id            String   @id @default(cuid())
+  userA         String
+  userB         String
+  lastMessageAt DateTime @default(now())
+  a             User     @relation("convoA", fields: [userA], references: [id], onDelete: Cascade)
+  b             User     @relation("convoB", fields: [userB], references: [id], onDelete: Cascade)
+  messages      Message[]
+
+  @@unique([userA, userB])
+  @@index([lastMessageAt])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model Block {
+  id        String @id @default(cuid())
+  blockerId String
+  blockedId String
+  blocker   User   @relation("blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User   @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+}

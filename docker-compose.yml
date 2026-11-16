@@ -1,0 +1,25 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://banju:${PG_PASSWORD:?在 .env 里设置 PG_PASSWORD}@postgres:5432/banju"
+      ADMIN_USERNAMES: "${ADMIN_USERNAMES:-banju-admin}"
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+      SEED_PASSWORD: "${SEED_PASSWORD:?在 .env 里设置 SEED_PASSWORD}"
+      NEXT_PUBLIC_SITE_URL: "${NEXT_PUBLIC_SITE_URL:-}"
+    depends_on:
+      - postgres
+    volumes: []
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: banju
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: banju
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data

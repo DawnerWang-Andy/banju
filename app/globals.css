@@ -1,0 +1,301 @@
+/* ============ 「稿纸与朱印」设计系统（移植自 半句-v1.0 原型，勿随意改动） ============ */
+:root {
+  --paper: #f5f5f1;
+  --ink: #1b1a17;
+  --meta: #8f8a7e;
+  --seal: #c2402e;
+  --hair: rgba(27, 26, 23, 0.14);
+  --grid: rgba(194, 64, 46, 0.065);
+  --con: #5c6b65;
+  --serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC", "STSong", "SimSun", serif;
+  --sans: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+html[data-theme="dark"] {
+  --paper: #16181a;
+  --ink: #e9e6dd;
+  --meta: #7c7a72;
+  --seal: #e05a45;
+  --hair: rgba(233, 230, 221, 0.16);
+  --grid: rgba(224, 90, 69, 0.06);
+  --con: #8fa398;
+}
+* { margin: 0; padding: 0; box-sizing: border-box }
+html, body { height: 100%; background: var(--paper); color: var(--ink);
+  font-family: var(--sans); -webkit-text-size-adjust: 100% }
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer }
+a { color: inherit; text-decoration: none }
+input, textarea { font: inherit; color: inherit; background: none; border: none; outline: none }
+::placeholder { color: var(--meta) }
+
+/* 外壳 */
+.app { position: relative; max-width: 560px; height: 100dvh; margin: 0 auto;
+  display: flex; flex-direction: column; overflow: hidden; background: var(--paper) }
+@media (min-width: 720px) {
+  body { background:
+    repeating-linear-gradient(to right, var(--grid) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(to bottom, var(--grid) 0 1px, transparent 1px 34px), var(--paper) }
+  .app { box-shadow: 0 0 0 1px var(--hair) }
+}
+.app > header { height: 52px; flex: none; display: flex; align-items: center;
+  justify-content: space-between; padding: 0 18px; padding-top: env(safe-area-inset-top) }
+.app > main { flex: 1; overflow: hidden; position: relative }
+.logo { width: 30px; height: 30px; border-radius: 4px; background: var(--seal);
+  color: #f5f5f1; font-family: var(--serif); font-size: 18px; display: flex;
+  align-items: center; justify-content: center; transform: rotate(-4deg);
+  animation: stampin 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) }
+@keyframes stampin { 0% { opacity: 0; transform: rotate(-14deg) scale(1.9) }
+  100% { opacity: 1; transform: rotate(-4deg) scale(1) } }
+.head-r { display: flex; gap: 16px; align-items: center }
+.head-r .bell { font-size: 13px; color: var(--meta); position: relative }
+.head-r .bell b { position: absolute; top: -7px; right: -12px; min-width: 15px; height: 15px;
+  border-radius: 8px; background: var(--seal); color: #fff; font-size: 10px; display: flex;
+  align-items: center; justify-content: center; padding: 0 3px; font-weight: 400 }
+
+/* 页面滚动容器 */
+.page-scroll { position: absolute; inset: 0; overflow-y: scroll;
+  -webkit-overflow-scrolling: touch; animation: pagein 0.22s ease }
+@keyframes pagein { from { opacity: 0.4 } to { opacity: 1 } }
+
+/* 底栏 */
+.tabbar { flex: none; display: flex; padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--hair); background: var(--paper); z-index: 5 }
+.tabbar a { flex: 1; font-family: var(--serif); font-size: 15px; color: var(--meta);
+  display: flex; flex-direction: column; align-items: center; gap: 3px }
+.tabbar a::before { content: ""; width: 4px; height: 4px; border-radius: 1px;
+  transform: rotate(8deg); visibility: hidden; background: var(--seal) }
+.tabbar a.on { color: var(--ink) }
+.tabbar a.on::before { visibility: visible }
+
+/* ---------- 句子卡（刷） ---------- */
+.feed { scroll-snap-type: y mandatory; overscroll-behavior-y: contain; height: 100% }
+.tabs { display: flex; gap: 18px; padding: 10px 20px 12px; font-family: var(--serif);
+  font-size: 14px; color: var(--meta); border-bottom: 1px solid var(--hair);
+  position: sticky; top: 0; background: var(--paper); z-index: 2 }
+.tabs a.on { color: var(--seal) }
+.tabs .snap-holder { flex: 1 }
+.feed-wrap { position: absolute; inset: 0; display: flex; flex-direction: column }
+.feed-body { flex: 1; position: relative }
+.card { min-height: 100%; scroll-snap-align: start; position: relative; display: flex;
+  flex-direction: column; padding: 6vh 24px 18px; touch-action: manipulation }
+.card .spine { position: absolute; top: 20px; right: 18px; writing-mode: vertical-rl;
+  font-family: var(--serif); font-size: 12px; color: var(--meta);
+  border: 1px solid var(--hair); padding: 7px 3px; letter-spacing: 0.3em }
+.card .ctext { font-family: var(--serif); font-size: clamp(24px, 6.6vw, 32px);
+  line-height: 1.8; letter-spacing: 0.05em; margin-top: 7%; max-width: 22em;
+  user-select: none; -webkit-user-select: none; opacity: 0; transform: translateY(16px);
+  transition: opacity 0.6s ease, transform 0.6s ease; white-space: pre-line }
+.card.seen .ctext { opacity: 1; transform: none }
+.revs { margin-top: 16px; max-width: 26em }
+.revline { font-size: 12px; color: var(--meta); margin-top: 7px; line-height: 1.7;
+  display: flex; gap: 7px; align-items: baseline }
+.rchip { flex: none; font-family: var(--serif); font-size: 10px; color: var(--meta);
+  border: 1px solid var(--hair); padding: 1px 6px; letter-spacing: 0.15em }
+.card .grow { flex: 1 }
+.card .foot { display: flex; align-items: flex-end; justify-content: space-between }
+.who { font-family: var(--serif); font-size: 15px }
+.who small { display: block; font-family: var(--sans); font-size: 11px; color: var(--meta);
+  margin-top: 4px; letter-spacing: 0.05em }
+.acts { display: flex; align-items: center; gap: 13px; font-size: 12px; color: var(--meta) }
+.acts button { display: flex; align-items: center; gap: 4px }
+.stamp { width: 30px; height: 30px; border: 1.5px solid var(--meta); border-radius: 3px;
+  font-family: var(--serif); font-size: 15px; color: var(--meta); display: flex;
+  align-items: center; justify-content: center; transform: rotate(-6deg) }
+.stamp.on { border-color: var(--seal); background: var(--seal); color: #f5f5f1 }
+.stamp.pop { animation: press 0.28s ease }
+@keyframes press { 0% { transform: rotate(-6deg) scale(1.6); opacity: 0.25 }
+  60% { transform: rotate(-6deg) scale(0.94); opacity: 1 }
+  100% { transform: rotate(-6deg) scale(1) } }
+.bigseal { position: absolute; left: 24px; top: 32%; width: 88px; height: 88px;
+  border-radius: 8px; background: var(--seal); color: #f5f5f1; font-family: var(--serif);
+  font-size: 52px; display: flex; align-items: center; justify-content: center;
+  transform: rotate(-6deg); pointer-events: none; animation: bigpress 0.72s ease forwards;
+  z-index: 3 }
+@keyframes bigpress { 0% { opacity: 0; transform: rotate(-12deg) scale(2.2) }
+  20% { opacity: 0.96; transform: rotate(-6deg) scale(0.95) }
+  34% { transform: rotate(-6deg) scale(1) } 72% { opacity: 0.96 }
+  100% { opacity: 0; transform: rotate(-6deg) translateY(-10px) } }
+.floatplus { position: absolute; font-size: 12px; color: var(--seal); pointer-events: none;
+  font-family: var(--sans); animation: floatup 0.85s ease forwards; z-index: 3 }
+@keyframes floatup { from { opacity: 1; transform: translateY(0) }
+  to { opacity: 0; transform: translateY(-30px) } }
+
+/* 悬浮写按钮 */
+.penbtn { position: fixed; right: max(20px, calc(50vw - 280px + 20px)); bottom: 86px;
+  width: 50px; height: 50px; border-radius: 50%; background: var(--ink); color: var(--paper);
+  font-family: var(--serif); font-size: 20px; z-index: 6; box-shadow: 0 2px 10px rgba(0,0,0,0.18) }
+
+/* 浮层 */
+.sheet { position: fixed; left: 0; right: 0; top: 0; bottom: 0; z-index: 10; display: flex;
+  align-items: flex-end; justify-content: center; background: rgba(10, 10, 10, 0.32) }
+.sheet-in { width: 100%; max-width: 560px; max-height: 82dvh; overflow-y: auto;
+  background: var(--paper); border-top: 1px solid var(--hair);
+  padding: 18px 20px calc(18px + env(safe-area-inset-bottom)); animation: rise 0.22s ease }
+@keyframes rise { from { transform: translateY(40px); opacity: 0.4 } to { transform: none; opacity: 1 } }
+.sheet-in h3 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 12px }
+
+/* 表单件 */
+.linein { width: 100%; border-bottom: 1px solid var(--hair); padding: 10px 0;
+  font-family: var(--serif); font-size: 16px }
+.primary-btn { padding: 9px 22px; background: var(--seal); color: #f5f5f1;
+  font-family: var(--serif); font-size: 15px; letter-spacing: 0.2em; border-radius: 3px }
+.primary-btn:disabled { opacity: 0.35 }
+.text-btn { font-family: var(--serif); color: var(--seal); font-size: 15px }
+.err { color: var(--seal); font-size: 13px; margin-top: 10px }
+.muted { font-size: 12px; color: var(--meta) }
+
+/* 发布页 */
+.penarea { width: 100%; height: 220px; resize: none; font-family: var(--serif);
+  font-size: 20px; line-height: 1.8; letter-spacing: 0.05em;
+  background: repeating-linear-gradient(to bottom, transparent 0 43px, var(--grid) 43px 44px) }
+.penrow { display: flex; align-items: center; justify-content: space-between; margin-top: 12px }
+.types { display: flex; gap: 8px }
+.types button { font-family: var(--serif); width: 34px; height: 34px;
+  border: 1px solid var(--hair); color: var(--meta) }
+.types button.sel { border-color: var(--seal); color: var(--seal) }
+.ring { position: relative; width: 34px; height: 34px }
+.ring i { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-style: normal; color: var(--meta) }
+
+/* 互评 */
+.stances { display: flex; gap: 7px; margin: 14px 0 10px; flex-wrap: wrap }
+.stances button { font-family: var(--serif); font-size: 12px; padding: 5px 12px;
+  border: 1px solid var(--hair); color: var(--meta); letter-spacing: 0.1em }
+.stances button.sel { border-color: var(--ink); color: var(--ink) }
+.revform { display: flex; gap: 10px; align-items: center }
+
+/* 话题 */
+.wrap { padding: 14px 20px 26px }
+.wrap h2 { font-family: var(--serif); font-size: 20px; font-weight: 600; margin: 8px 0 16px }
+.topic { border-bottom: 1px solid var(--hair); padding: 15px 0; display: block }
+.topic h4 { font-family: var(--serif); font-size: 17px; font-weight: 600; line-height: 1.6 }
+.bar { display: flex; height: 4px; margin-top: 12px; border-radius: 2px; overflow: hidden;
+  background: var(--hair) }
+.bar i { display: block; transition: width 0.5s ease }
+.bar .pro { background: var(--seal) }
+.bar .con { background: var(--con) }
+.barn { display: flex; justify-content: space-between; font-size: 11px; color: var(--meta);
+  margin-top: 6px }
+.closed-tag { font-size: 11px; color: var(--meta); border: 1px solid var(--hair);
+  padding: 2px 6px; margin-left: 8px; vertical-align: 2px }
+.backbar { display: flex; align-items: center; gap: 10px; padding: 12px 0 4px }
+.backbar a, .backbar button { font-family: var(--serif); color: var(--meta); font-size: 15px }
+.brief { border: 1px solid var(--hair); padding: 14px; margin: 14px 0 }
+.brief h5 { font-family: var(--serif); font-size: 13px; color: var(--meta);
+  letter-spacing: 0.2em; margin-bottom: 10px }
+.briefkws { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline }
+.kw { font-family: var(--serif); line-height: 1.5 }
+.briefcols { display: flex; gap: 14px; margin-top: 12px }
+.briefcols > div { flex: 1 }
+.briefcols .lab { font-size: 11px; letter-spacing: 0.1em; margin-bottom: 6px }
+.briefcols .lab.pro { color: var(--seal) }
+.briefcols .lab.con { color: var(--con) }
+.bstat { font-size: 11px; color: var(--meta); margin-top: 12px; letter-spacing: 0.05em }
+.simitem { display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid var(--hair); padding: 11px 0; font-size: 14px;
+  font-family: var(--serif) }
+.point { padding: 14px 0; border-bottom: 1px solid var(--hair) }
+.point .side { font-family: var(--serif); font-size: 11px; display: inline-block;
+  border: 1px solid currentColor; padding: 2px 6px; margin-bottom: 8px; letter-spacing: 0.15em }
+.point .side.pro { color: var(--seal) }
+.point .side.con { color: var(--con) }
+.point .ptext { font-family: var(--serif); font-size: 17px; line-height: 1.8; letter-spacing: 0.04em }
+.point .foot { display: flex; justify-content: space-between; align-items: center;
+  margin-top: 8px; font-size: 11px; color: var(--meta) }
+.pick { display: flex; gap: 10px; margin: 16px 0 }
+.pick button { flex: 1; padding: 12px 0; border: 1px solid var(--hair);
+  font-family: var(--serif); font-size: 15px; color: var(--meta) }
+.pick button.sel { color: var(--paper); border-color: var(--seal) }
+.pick button.sel.pro { background: var(--seal) }
+.pick button.sel.con { background: var(--con) }
+html[data-theme="dark"] .pick button.sel.con { color: #16181a }
+
+/* 私信 */
+.conv { display: flex; gap: 12px; align-items: center; padding: 15px 0;
+  border-bottom: 1px solid var(--hair) }
+.avatar { width: 38px; height: 38px; border-radius: 3px; background: var(--hair);
+  font-family: var(--serif); font-size: 15px; display: flex; align-items: center;
+  justify-content: center }
+.conv .mid { flex: 1; min-width: 0 }
+.conv .mid b { font-family: var(--serif); font-weight: 600; font-size: 15px }
+.conv .mid p { font-size: 12px; color: var(--meta); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; margin-top: 3px }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--seal) }
+.bubble { max-width: 78%; padding: 9px 13px; border-radius: 4px; font-size: 14px;
+  line-height: 1.7; margin: 6px 0; overflow-wrap: anywhere }
+.mine { margin-left: auto; background: var(--ink); color: var(--paper) }
+.theirs { background: var(--hair) }
+.chatcol { position: absolute; inset: 0; display: flex; flex-direction: column }
+.msgs { flex: 1; overflow-y: auto; padding: 8px 16px; display: flex; flex-direction: column }
+.msgbar { flex: none; display: flex; gap: 10px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--hair); align-items: center }
+.msgin { flex: 1; border-bottom: 1px solid var(--hair); padding: 8px 4px; font-size: 14px }
+
+/* 我 / 主页 */
+.me-head { padding: 26px 0 18px; border-bottom: 1px solid var(--hair) }
+.me-head .name { font-family: var(--serif); font-size: 22px; letter-spacing: 0.08em }
+.mini { display: flex; gap: 22px; margin-top: 16px; font-size: 12px; color: var(--meta) }
+.mini b { display: block; font-family: var(--serif); font-size: 18px; color: var(--ink); font-weight: 600 }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px }
+.grid .cell { border: 1px solid var(--hair); padding: 14px 12px; font-family: var(--serif);
+  font-size: 13px; line-height: 1.8; min-height: 96px; letter-spacing: 0.03em;
+  white-space: pre-line; overflow-wrap: anywhere }
+.row { display: flex; justify-content: space-between; padding: 15px 0;
+  border-bottom: 1px solid var(--hair); font-size: 14px; align-items: center; gap: 12px }
+.switch { width: 44px; height: 24px; border-radius: 12px; background: var(--hair);
+  position: relative; transition: 0.2s; flex: none }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+  border-radius: 50%; background: var(--paper); transition: 0.2s }
+.switch.on { background: var(--seal) }
+.switch.on::after { left: 23px }
+.hintcard { border: 1px solid var(--hair); padding: 12px 14px; font-size: 12px;
+  color: var(--meta); line-height: 1.7; margin-top: 16px; font-family: var(--serif) }
+
+/* admin */
+.admin-tabs { display: flex; gap: 14px; font-family: var(--serif); font-size: 14px;
+  color: var(--meta); margin: 10px 0 16px; flex-wrap: wrap }
+.admin-tabs button.sel { color: var(--seal) }
+table.adm { width: 100%; border-collapse: collapse; font-size: 12px }
+table.adm th { text-align: left; color: var(--meta); font-weight: 400; padding: 6px 8px 6px 0;
+  border-bottom: 1px solid var(--hair) }
+table.adm td { padding: 9px 8px 9px 0; border-bottom: 1px solid var(--hair);
+  vertical-align: top; line-height: 1.6 }
+table.adm .txt { max-width: 30vw; overflow-wrap: anywhere }
+.adm-btn { font-size: 12px; padding: 4px 10px; border: 1px solid var(--hair); margin-right: 6px }
+.adm-btn.go { border-color: var(--seal); color: var(--seal) }
+
+/* 分享卡 */
+.poster-layer { position: fixed; inset: 0; z-index: 12; display: flex; align-items: center;
+  justify-content: center; background: rgba(10, 10, 10, 0.45) }
+.poster-box { display: flex; flex-direction: column; align-items: center }
+.poster { width: min(78vw, 340px); aspect-ratio: 3/4; background: var(--paper);
+  border-radius: 2px; padding: 8% 9%; display: flex; flex-direction: column;
+  font-family: var(--serif); color: var(--ink); position: relative;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3) }
+.poster .pt { font-size: 21px; line-height: 1.9; letter-spacing: 0.06em; margin-top: 6%;
+  white-space: pre-line }
+.poster .grow { flex: 1 }
+.poster .pf { display: flex; justify-content: space-between; align-items: flex-end;
+  font-family: var(--sans); font-size: 11px; color: var(--meta); letter-spacing: 0.08em }
+.poster .sealmini { width: 34px; height: 34px; background: var(--seal); color: #f5f5f1;
+  border-radius: 4px; display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif); font-size: 19px; transform: rotate(-4deg) }
+.share-btns { display: flex; gap: 14px; margin-top: 20px; justify-content: center }
+.share-btns button { padding: 10px 24px; font-size: 14px; border: 1px solid rgba(255,255,255,0.4);
+  color: #fff; border-radius: 3px }
+
+/* toast */
+.toast { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%);
+  background: var(--ink); color: var(--paper); font-size: 13px; padding: 9px 18px;
+  border-radius: 3px; opacity: 0; pointer-events: none; transition: 0.25s; z-index: 20;
+  white-space: nowrap }
+.toast.show { opacity: 1 }
+
+.empty { text-align: center; color: var(--meta); font-size: 13px; padding: 60px 24px;
+  font-family: var(--serif); line-height: 2 }
+
+:focus-visible { outline: 2px solid var(--seal); outline-offset: 2px }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important }
+  .card .ctext { opacity: 1; transform: none }
+}
