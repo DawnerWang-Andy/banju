@@ -1,5 +1,6 @@
 "use client";
 // 分享句子卡片：3:4 竖版 + canvas 逐字断行导出（复刻原型 savePoster）
+import { useEffect, useState } from "react";
 import { BRAND } from "@/lib/brand";
 import { toast } from "@/lib/ui";
 
@@ -10,7 +11,14 @@ export function SharePoster({
   post: { id: string; content: string; authorName: string };
   onClose: () => void;
 }) {
-  const link = `${BRAND.url ? BRAND.url.replace(/\/$/, "") : ""}/p/${post.id}`;
+  // 站点基址：优先 NEXT_PUBLIC_SITE_URL（构建期），否则回落到当前访问域名（部署免配置）
+  const [siteBase, setSiteBase] = useState(BRAND.url.replace(/\/$/, ""));
+  useEffect(() => {
+    if (!siteBase && typeof window !== "undefined" && window.location?.origin) {
+      setSiteBase(window.location.origin);
+    }
+  }, [siteBase]);
+  const link = `${siteBase}/p/${post.id}`;
 
   const save = () => {
     const W = 600, H = 800;

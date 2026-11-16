@@ -4,6 +4,8 @@
 
 generator client {
   provider = "prisma-client-js"
+  // Alpine 容器（node:20-alpine）用 musl + OpenSSL 3；native 覆盖本地 macOS/Linux 开发
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {

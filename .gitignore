@@ -6,3 +6,7 @@ prisma/dev.db
 prisma/dev.db-journal
 *.tsbuildinfo
 next-env.d.ts
+pgdata
+prisma/prod.db
+prisma/prod.db-journal
+.deploy-*

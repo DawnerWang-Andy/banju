@@ -44,6 +44,16 @@ npm run dev          # 启动，监听 0.0.0.0:3000
 
 ## 部署
 
+### 方式 B0 · 本机公网隧道（零账号临时方案，已验证）
+
+```bash
+scripts/public-up.sh    # Docker(web+Postgres) + cloudflared 隧道，末行打印公网地址
+scripts/public-down.sh  # 停止（数据保留在 ./pgdata）
+```
+
+适合"今天就要让外地同学打开"：不需要任何云账号，HTTPS、任何网络可访问；代价是地址随重启变化、电脑睡眠即下线。
+管理员账号由 `npm run owner`（OWNER_USERNAME/OWNER_PASSWORD 环境变量）幂等创建，避免被抢注。
+
 ### 方式 B2 · 零成本公网起步（不用备案，任何网络可访问）
 
 仓库推 GitHub → Render/Railway 新建 Web Service（原生识别 Dockerfile）→

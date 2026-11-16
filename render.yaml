@@ -15,4 +15,4 @@ services:
       - key: SEED_PASSWORD
         generateValue: true # 随机生成，之后可在环境变量里改成自己记得住的
       - key: NEXT_PUBLIC_SITE_URL
-        sync: false # 填 https://你的服务.onrender.com（分享卡片里的链接用）
+        value: "" # 可留空：分享链接运行时自动回落到当前访问域名（components/SharePoster.tsx）
