@@ -41,7 +41,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const owners = api("GET", "/owners");
 if (owners.status !== 200) die(`GET /owners 失败 ${owners.status}: ${JSON.stringify(owners.json).slice(0, 300)}`);
-const owner = owners.json[0];
+const owner = owners.json[0].owner || owners.json[0];
 console.log(`✅ 账号：${owner.name || owner.email}（ownerId=${owner.id}）`);
 
 const envVars = [
@@ -62,7 +62,7 @@ const candidates = [
 let svc = null, usedName = null;
 for (const name of candidates) {
   const body = {
-    type: "web",
+    type: "web_service",
     name,
     ownerId: owner.id,
     repo: REPO,
