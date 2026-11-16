@@ -20,6 +20,13 @@ const { PrismaClient } = require("@prisma/client");
       console.error("种子失败（不影响启动）:", String(e).slice(0, 300));
     }
   }
+  if (process.env.OWNER_USERNAME && process.env.OWNER_PASSWORD) {
+    try {
+      execSync("node scripts/ensure-owner.js", { stdio: "inherit" });
+    } catch (e) {
+      console.error("管理员账号创建失败（不影响启动）:", String(e).slice(0, 200));
+    }
+  }
   spawn("node", [".next/standalone/server.js"], { stdio: "inherit" });
 })().catch((e) => {
   console.error("boot 失败:", e);

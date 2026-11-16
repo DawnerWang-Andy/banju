@@ -15,17 +15,26 @@ const bcrypt = require("bcryptjs");
   }
   const p = new PrismaClient();
   const hash = await bcrypt.hash(pw, 10);
-  await p.user.upsert({
-    where: { username: u },
-    create: {
-      username: u,
-      penName: process.env.OWNER_PENNAME || "站主",
-      passwordHash: hash,
-      role: "ADMIN",
-    },
-    update: { passwordHash: hash, role: "ADMIN", banned: false },
-  });
-  console.log("管理员账号已就绪:", u);
+  const ex = await p.user.findUnique({ where: { username: u } });
+  if (ex && process.env.OWNER_FORCE_RESET !== "1") {
+    console.log("管理员已存在，跳过（如需重置密码设 OWNER_FORCE_RESET=1）:", u);
+  } else if (ex) {
+    await p.user.update({
+      where: { username: u },
+      data: { passwordHash: hash, role: "ADMIN", banned: false },
+    });
+    console.log("管理员密码已重置:", u);
+  } else {
+    await p.user.create({
+      data: {
+        username: u,
+        penName: process.env.OWNER_PENNAME || "站主",
+        passwordHash: hash,
+        role: "ADMIN",
+      },
+    });
+    console.log("管理员账号已创建:", u);
+  }
   await p.$disconnect();
 })().catch((e) => {
   console.error(e);
