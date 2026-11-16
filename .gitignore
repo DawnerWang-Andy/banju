@@ -10,3 +10,7 @@ pgdata
 prisma/prod.db
 prisma/prod.db-journal
 .deploy-*
+.env.local
+.env*.local
+.neon
+.env.neon

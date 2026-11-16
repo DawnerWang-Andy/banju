@@ -9,5 +9,8 @@ if (!s.includes('provider = "sqlite"')) {
   process.exit(0);
 }
 s = s.replace('provider = "sqlite"', 'provider = "postgresql"');
+if (!s.includes("directUrl")) {
+  s = s.replace('url      = env("DATABASE_URL")', 'url      = env("DATABASE_URL")\n  directUrl = env("DATABASE_URL_UNPOOLED")');
+}
 fs.writeFileSync(file, s);
 console.log("schema 已切换为 postgresql（记得构建后不要回写仓库；git 里保持 sqlite 版）");

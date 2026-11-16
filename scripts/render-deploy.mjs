@@ -16,6 +16,7 @@ const die = (m) => { console.error("❌ " + m); process.exit(1); };
 
 const KEY = process.env.RENDER_API_KEY || die("缺少 RENDER_API_KEY");
 const NEON = process.env.NEON_DATABASE_URL || die("缺少 NEON_DATABASE_URL（Neon 连接串）");
+const NEON_DIRECT = process.env.NEON_DATABASE_URL_UNPOOLED || "";
 if (!/^postgres(ql)?:\/\//.test(NEON)) die("NEON_DATABASE_URL 不像 Postgres 连接串");
 const REGION = process.env.REGION || "singapore";
 const ADMIN = process.env.ADMIN_USERNAMES || "wangyihan";
@@ -45,6 +46,7 @@ console.log(`✅ 账号：${owner.name || owner.email}（ownerId=${owner.id}）`
 
 const envVars = [
   { key: "DATABASE_URL", value: NEON },
+  ...(NEON_DIRECT ? [{ key: "DATABASE_URL_UNPOOLED", value: NEON_DIRECT }] : []),
   { key: "ADMIN_USERNAMES", value: ADMIN },
   { key: "COOKIE_SECURE", value: "true" },
   { key: "SEED_PASSWORD", value: SEED_P },
