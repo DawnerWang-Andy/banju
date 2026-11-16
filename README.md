@@ -44,6 +44,8 @@ npm run dev          # 启动，监听 0.0.0.0:3000
 
 ## 部署
 
+**线上永久地址：https://banju-2g83.onrender.com**（Render 免费档 + Neon Postgres production 分支；详见《部署手册》00 节）
+
 ### 方式 B0 · 本机公网隧道（零账号临时方案，已验证）
 
 ```bash

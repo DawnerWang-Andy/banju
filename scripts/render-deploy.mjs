@@ -100,7 +100,8 @@ while (Date.now() - t0 < 25 * 60 * 1000) {
 if (!live) die(`部署未成功：${JSON.stringify(failed || {}).slice(0, 400)}（到 Render 控制台看 Build Logs）`);
 
 const detail = api("GET", `/services/${svc.id}`);
-const url = detail.json?.service?.serviceDetails?.url || `https://${usedName}.onrender.com`;
+const url = detail.json?.serviceDetails?.url || detail.json?.service?.serviceDetails?.url
+  || die("无法从 API 读到服务 URL（不要按名字猜：同名子域名可能属于别人）");
 console.log("✅ 部署 live，等待冷启动并冒烟检查…");
 let code = 0;
 for (let i = 0; i < 24; i++) {
